@@ -1,0 +1,6 @@
+.github
+node_modules
+dist
+pnpm-lock.yaml
+*.lock
+*.md
