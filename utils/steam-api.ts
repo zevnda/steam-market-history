@@ -187,6 +187,7 @@ async function calculateSteamMarketTotal(authParams: AuthParams): Promise<Market
         hasMoreItems = false
         progressBar.update(items.length)
         progressBar.stop()
+        console.log() // Add a new line after the progress bar
         logger.logSuccess(`Processed ${items.length} / ${totalCount} total items`)
       } else {
         // Otherwise, update the progress bar and wait before the next request
