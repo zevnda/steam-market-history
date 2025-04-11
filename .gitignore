@@ -27,3 +27,5 @@ node_modules/
 
 # Build output
 dist
+
+example.json

@@ -13,10 +13,13 @@ interface AuthParams {
 interface MarketItem {
   name: string
   price: number
+  type: 'sale' | 'purchase'
 }
 
 interface MarketTotalResult {
   total: number
+  sales: number
+  purchases: number
   currency: string
   items: MarketItem[]
 }
@@ -24,6 +27,8 @@ interface MarketTotalResult {
 async function calculateSteamMarketTotal(authParams: AuthParams): Promise<MarketTotalResult> {
   const items: MarketItem[] = []
   let total: number = 0
+  let salesTotal: number = 0
+  let purchasesTotal: number = 0
   let currency: string = ''
 
   let cookieValue = `sessionid=${authParams.sessionId}; steamLoginSecure=${authParams.steamLoginSecure}`
@@ -87,15 +92,24 @@ async function calculateSteamMarketTotal(authParams: AuthParams): Promise<Market
       const dom = new JSDOM(data.results_html)
       const document = dom.window.document
 
-      const priceElements = document.querySelectorAll('.market_listing_price')
-      logger.logVerbose(`Found ${priceElements.length} price elements on this page`)
+      const marketRows = document.querySelectorAll('.market_listing_row')
+      logger.logVerbose(`Found ${marketRows.length} market listing rows on this page`)
 
       const previousItemsCount = items.length
 
-      for (const priceElement of Array.from(priceElements)) {
+      for (const row of Array.from(marketRows)) {
+        const gainOrLossElement = row.querySelector('.market_listing_gainorloss')
+        const priceElement = row.querySelector('.market_listing_price')
+
+        if (!gainOrLossElement || !priceElement) continue
+
+        const gainOrLossText = gainOrLossElement.textContent?.trim()
         const priceText = priceElement.textContent?.trim()
 
-        if (!priceText) continue
+        if (!gainOrLossText || !priceText) continue
+
+        const isSale = gainOrLossText.includes('-')
+        const isPurchase = gainOrLossText.includes('+')
 
         const match = priceText.match(/([A-Z$£€¥]*)[\s]*([0-9.,]+)/)
 
@@ -109,23 +123,29 @@ async function calculateSteamMarketTotal(authParams: AuthParams): Promise<Market
           const priceValue = parseFloat(match[2].replace(',', '.'))
 
           if (!isNaN(priceValue)) {
-            total += priceValue
-
-            const row = priceElement.closest('.market_listing_row')
             let itemName = 'Unknown Item'
-            if (row) {
-              const nameElement = row.querySelector('.market_listing_item_name')
-              if (nameElement) {
-                itemName = nameElement.textContent?.trim() || 'Unknown Item'
-              }
+            const nameElement = row.querySelector('.market_listing_item_name')
+            if (nameElement) {
+              itemName = nameElement.textContent?.trim() || 'Unknown Item'
             }
+
+            const type = isSale ? 'sale' : 'purchase'
+
+            if (isSale) {
+              salesTotal += priceValue
+              logger.logVerbose(`Added sale: ${itemName} (${logger.formatCurrency(priceValue, currency)})`)
+            } else if (isPurchase) {
+              purchasesTotal += priceValue
+              logger.logVerbose(`Added purchase: ${itemName} (${logger.formatCurrency(priceValue, currency)})`)
+            }
+
+            total += priceValue
 
             items.push({
               name: itemName,
               price: priceValue,
+              type: type,
             })
-
-            logger.logVerbose(`Added item: ${itemName} (${logger.formatCurrency(priceValue, currency)})`)
           }
         }
       }
@@ -149,6 +169,8 @@ async function calculateSteamMarketTotal(authParams: AuthParams): Promise<Market
 
     return {
       total: parseFloat(total.toFixed(2)),
+      sales: parseFloat(salesTotal.toFixed(2)),
+      purchases: parseFloat(purchasesTotal.toFixed(2)),
       currency,
       items,
     }

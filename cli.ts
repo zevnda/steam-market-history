@@ -85,12 +85,22 @@ export async function runCli(): Promise<void> {
     const sortedItems = [...result.items].sort((a, b) => b.price - a.price)
 
     logger.logHeader('TOP 10 MOST VALUABLE TRANSACTIONS')
+
+    logger.log(`${logger.consoleColors.green}■${logger.consoleColors.reset} Sales`)
+    logger.log(`${logger.consoleColors.red}■${logger.consoleColors.reset} Purchases\n`)
+
     sortedItems.slice(0, 10).forEach((item, index) => {
-      logger.log(`${index + 1}. ${item.name}: ${logger.formatCurrency(item.price, result.currency)}`)
+      const color = item.type === 'purchase' ? logger.consoleColors.red : logger.consoleColors.green
+      const symbol = item.type === 'purchase' ? '-' : '+'
+      logger.log(
+        `${index + 1}. ${item.name}: ${color}${symbol}${logger.formatCurrency(item.price, result.currency)}${logger.consoleColors.reset}`,
+      )
     })
 
     logger.logHeader('RESULTS')
-    logger.logSuccess(`Total Market Value: ${logger.formatCurrency(result.total, result.currency)}`)
+    logger.logSuccess(`Total From Sales: ${logger.formatCurrency(result.sales, result.currency)}`)
+    logger.logSuccess(`Total In Purchases: ${logger.formatCurrency(result.purchases, result.currency)}`)
+    logger.logSuccess(`Grand Total: ${logger.formatCurrency(result.total, result.currency)}`)
     logger.logSuccess(`Total Items: ${result.items.length}\n`)
   } catch (error) {
     logger.logError('Failed to calculate market total')
