@@ -2,9 +2,7 @@ import 'dotenv/config'
 import * as logger from './utils/logger'
 import { runCli } from './cli'
 
-/**
- * Display help information about the application and available flags
- */
+// Show help text when the --help flag is used
 function displayHelp(): void {
   logger.logHeader('STEAM MARKET HISTORY CALCULATOR - HELP')
 
@@ -25,15 +23,19 @@ function displayHelp(): void {
   logger.log('\nFor more information, see the README.md file in the project root')
 }
 
+// Parse command line arguments
 const args = process.argv.slice(2)
 const VERBOSE = args.includes('--verbose')
 const HELP = args.includes('--help')
 
+// Show help and exit if --help flag is used
 if (HELP) {
   displayHelp()
   process.exit(0)
 }
 
+// Parse the --top flag to determine how many top transactions to show
+// If not specified or invalid, default to 10
 const topArg = args.find(arg => arg.startsWith('--top='))
 let TOP_COUNT = 10
 
@@ -47,6 +49,8 @@ if (topArg) {
   }
 }
 
+// Parse the --output flag to determine where to save the output file
+// If not specified, no file will be generated
 const outputArg = args.find(arg => arg.startsWith('--output='))
 let outputPath: string | null = null
 
@@ -59,14 +63,17 @@ if (outputArg) {
   }
 }
 
+// Set verbose mode based on the --verbose flag
 logger.setVerboseMode(VERBOSE)
 
+// Log verbose information if enabled
 if (VERBOSE) {
-  logger.logVerbose('Starting Steam Market Calculator with verbose logging enabled')
+  logger.logVerbose('Starting Steam Market History Calculator with verbose logging enabled')
   logger.logVerbose(`Will display top ${TOP_COUNT} most valuable transactions`)
   if (outputPath) {
     logger.logVerbose(`Will save transaction data to ${outputPath}`)
   }
 }
 
+// Run the CLI with the parsed options
 runCli(TOP_COUNT, outputPath)

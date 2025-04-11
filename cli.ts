@@ -5,6 +5,7 @@ import * as logger from './utils/logger'
 import * as cookieManager from './utils/cookie-manager'
 import { calculateSteamMarketTotal, AuthParams, MarketTotalResult } from './utils/steam-api'
 
+// Helper function to get user input from the command line
 function prompt(question: string): Promise<string> {
   const rl = readline.createInterface({
     input: process.stdin,
@@ -19,8 +20,11 @@ function prompt(question: string): Promise<string> {
   })
 }
 
+// Save the transaction data to a JSON file
+// Returns true if successful, false otherwise
 function saveToJsonFile(data: MarketTotalResult, outputPath: string): boolean {
   try {
+    // Format the data into a more readable structure
     const outputData = {
       summary: {
         totalSales: data.sales,
@@ -37,11 +41,13 @@ function saveToJsonFile(data: MarketTotalResult, outputPath: string): boolean {
       })),
     }
 
+    // Create the directory if it doesn't exist
     const dir = path.dirname(outputPath)
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true })
     }
 
+    // Write the data to the file
     fs.writeFileSync(outputPath, JSON.stringify(outputData, null, 2), 'utf8')
     return true
   } catch (error) {
@@ -51,6 +57,7 @@ function saveToJsonFile(data: MarketTotalResult, outputPath: string): boolean {
   }
 }
 
+// Main function to run the CLI interface
 export async function runCli(topTransactionsCount = 10, outputPath: string | null = null): Promise<void> {
   logger.logHeader('STEAM MARKET HISTORY CALCULATOR')
 
@@ -58,6 +65,7 @@ export async function runCli(topTransactionsCount = 10, outputPath: string | nul
   const savedCookies = cookieManager.loadCookies()
   let useSavedCookies = false
 
+  // Check if we have saved cookies
   if (savedCookies) {
     logger.logInfo('Found saved authentication data in .env file')
     const useExisting = await prompt('Do you want to use saved authentication data? (y/n): ')
@@ -71,7 +79,9 @@ export async function runCli(topTransactionsCount = 10, outputPath: string | nul
     }
   }
 
+  // If we're not using saved cookies, ask for them
   if (!useSavedCookies) {
+    // Show instructions for finding the cookies
     logger.log('\n📋 Instructions:', logger.consoleColors.bright)
     logger.log('1. Go to "https://steamcommunity.com" and sign in to your account')
     logger.log('2. Press F12 to open Developer Tools, go to the Application (or Storage) tab')
@@ -80,11 +90,13 @@ export async function runCli(topTransactionsCount = 10, outputPath: string | nul
 
     logger.logHeader('ENTER AUTHENTICATION DETAILS')
 
+    // Get the required cookies
     authParams = {
       sessionId: await prompt('sessionid: '),
       steamLoginSecure: await prompt('steamLoginSecure: '),
     }
 
+    // Ask for optional cookies
     const useSma = await prompt('Do you need to provide a steamMachineAuth cookie? (y/n): ')
     if (useSma.toLowerCase() === 'y') {
       authParams.steamMachineAuth = await prompt('steamMachineAuth: ')
@@ -98,6 +110,7 @@ export async function runCli(topTransactionsCount = 10, outputPath: string | nul
       logger.logVerbose('Added steamParental to authentication parameters')
     }
 
+    // Ask if the user wants to save the cookies for next time
     const saveCookiesResponse = await prompt(
       'Would you like to save these authentication details for future use? (y/n): ',
     )
@@ -113,14 +126,18 @@ export async function runCli(topTransactionsCount = 10, outputPath: string | nul
   logger.logInfo('Starting the calculation process, please wait...')
 
   try {
+    // Calculate the market total using the Steam API
     const result: MarketTotalResult = await calculateSteamMarketTotal(authParams!)
 
+    // Sort items by price (highest first) for display
     const sortedItems = [...result.items].sort((a, b) => b.price - a.price)
 
+    // Display the top transactions
     logger.logHeader(`TOP ${topTransactionsCount} MOST VALUABLE TRANSACTIONS`)
 
-    logger.log(`${logger.consoleColors.green}■${logger.consoleColors.reset} Sales`)
-    logger.log(`${logger.consoleColors.red}■${logger.consoleColors.reset} Purchases\n`)
+    logger.log(
+      `${logger.consoleColors.green}■${logger.consoleColors.reset} Sales | ${logger.consoleColors.red}■${logger.consoleColors.reset} Purchases\n`,
+    )
 
     sortedItems.slice(0, topTransactionsCount).forEach((item, index) => {
       const color = item.type === 'purchase' ? logger.consoleColors.red : logger.consoleColors.green
@@ -130,6 +147,7 @@ export async function runCli(topTransactionsCount = 10, outputPath: string | nul
       )
     })
 
+    // Save the data to a json file if requested
     if (outputPath) {
       logger.logInfo(`Saving transaction data to ${outputPath}...`)
       if (saveToJsonFile(result, outputPath)) {
@@ -139,6 +157,7 @@ export async function runCli(topTransactionsCount = 10, outputPath: string | nul
       }
     }
 
+    // Display the summary results
     logger.logHeader('RESULTS')
     logger.logSuccess(`Total From Sales: ${logger.formatCurrency(result.sales, result.currency)}`)
     logger.logSuccess(`Total In Purchases: ${logger.formatCurrency(result.purchases, result.currency)}`)
@@ -148,6 +167,7 @@ export async function runCli(topTransactionsCount = 10, outputPath: string | nul
     logger.logError('Failed to calculate market total')
     logger.logVerbose((error as Error).stack || '')
 
+    // If we used saved cookies and it failed, ask if we should delete them
     if (useSavedCookies) {
       logger.logWarning('Authentication with saved data failed')
       const deleteCookies = await prompt('Would you like to delete the saved authentication data? (y/n): ')
