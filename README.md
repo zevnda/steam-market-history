@@ -93,10 +93,10 @@ To delete saved authentication:
 ## How It Works
 
 1. The tool uses your Steam authentication cookies to access your market history
-2. It paginates through all available market history pages (500 items per request)
-3. For each page, it parses the `results_html` property to extract item names and prices
-4. The results are aggregated and sorted by value
-5. The total market value along with your top 10 most valuable transaction are displayed
+2. It makes a GET request to `https://steamcommunity.com/market/myhistory`
+3. It paginates through the results to get all available market history pages (500 items per request)
+4. For each page, it parses the `results_html` property to extract item names and prices
+5. The results are aggregated, sorted by value and displayed to the user
 
 ## Troubleshooting
 
