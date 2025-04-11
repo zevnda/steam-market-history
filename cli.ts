@@ -84,7 +84,7 @@ export async function runCli(): Promise<void> {
 
     const sortedItems = [...result.items].sort((a, b) => b.price - a.price)
 
-    logger.logHeader('TOP 10 MOST VALUABLE SALES')
+    logger.logHeader('TOP 10 MOST VALUABLE TRANSACTIONS')
     sortedItems.slice(0, 10).forEach((item, index) => {
       logger.log(`${index + 1}. ${item.name}: ${logger.formatCurrency(item.price, result.currency)}`)
     })
