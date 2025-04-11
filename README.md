@@ -1,6 +1,6 @@
 # Steam Market History Calculator
 
-A command-line tool to calculate the total value of your Steam Market sale history. This utility fetches your Steam Market history and calculates the total value of all your transactions along with providing insights into your most valuable ones
+A command-line tool to calculate the total value of your Steam Market transactions. This utility fetches your Steam Market history and calculates the total value of all your transactions along with providing insights into your most valuable sold items
 
 ## Installation
 
