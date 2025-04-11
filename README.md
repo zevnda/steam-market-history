@@ -29,16 +29,32 @@ A command-line tool to calculate the total value of your Steam Market transactio
 
 ## Usage
 
+### Basic Usage
 Run the CLI using:
 
 ```bash
 pnpm start
 ```
 
-For verbose logging (useful for debugging):
+### Available Options
 
-```bash
-pnpm start --verbose
+You can customize the behavior with the following command-line flags:
+
+```
+Usage: pnpm start [options]
+
+Options:
+  --help                  Display this help output
+  --verbose               Enable verbose logging for debugging
+  --top=N                 Display top N most valuable transactions (default: 10)
+  --output=PATH           Save all transaction data to specified JSON file
+
+Examples:
+  pnpm start
+  pnpm start --verbose
+  pnpm start --top=20
+  pnpm start --output=data/export.json
+  pnpm start --top=15 --output=results.json --verbose
 ```
 
 ## Authentication

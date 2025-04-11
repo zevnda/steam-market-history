@@ -1,5 +1,6 @@
 import * as readline from 'readline'
 import * as path from 'path'
+import * as fs from 'fs'
 import * as logger from './utils/logger'
 import * as cookieManager from './utils/cookie-manager'
 import { calculateSteamMarketTotal, AuthParams, MarketTotalResult } from './utils/steam-api'
@@ -18,7 +19,39 @@ function prompt(question: string): Promise<string> {
   })
 }
 
-export async function runCli(): Promise<void> {
+function saveToJsonFile(data: MarketTotalResult, outputPath: string): boolean {
+  try {
+    const outputData = {
+      summary: {
+        totalSales: data.sales,
+        totalPurchases: data.purchases,
+        grandTotal: data.total,
+        currency: data.currency,
+        itemCount: data.items.length,
+      },
+      transactions: data.items.map(item => ({
+        name: item.name,
+        price: item.price,
+        formattedPrice: logger.formatCurrency(item.price, data.currency),
+        type: item.type,
+      })),
+    }
+
+    const dir = path.dirname(outputPath)
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true })
+    }
+
+    fs.writeFileSync(outputPath, JSON.stringify(outputData, null, 2), 'utf8')
+    return true
+  } catch (error) {
+    logger.logError(`Failed to save transaction data: ${(error as Error).message}`)
+    logger.logVerbose((error as Error).stack || '')
+    return false
+  }
+}
+
+export async function runCli(topTransactionsCount = 10, outputPath: string | null = null): Promise<void> {
   logger.logHeader('STEAM MARKET HISTORY CALCULATOR')
 
   let authParams: AuthParams | null = null
@@ -84,18 +117,27 @@ export async function runCli(): Promise<void> {
 
     const sortedItems = [...result.items].sort((a, b) => b.price - a.price)
 
-    logger.logHeader('TOP 10 MOST VALUABLE TRANSACTIONS')
+    logger.logHeader(`TOP ${topTransactionsCount} MOST VALUABLE TRANSACTIONS`)
 
     logger.log(`${logger.consoleColors.green}■${logger.consoleColors.reset} Sales`)
     logger.log(`${logger.consoleColors.red}■${logger.consoleColors.reset} Purchases\n`)
 
-    sortedItems.slice(0, 10).forEach((item, index) => {
+    sortedItems.slice(0, topTransactionsCount).forEach((item, index) => {
       const color = item.type === 'purchase' ? logger.consoleColors.red : logger.consoleColors.green
       const symbol = item.type === 'purchase' ? '-' : '+'
       logger.log(
         `${index + 1}. ${item.name}: ${color}${symbol}${logger.formatCurrency(item.price, result.currency)}${logger.consoleColors.reset}`,
       )
     })
+
+    if (outputPath) {
+      logger.logInfo(`Saving transaction data to ${outputPath}...`)
+      if (saveToJsonFile(result, outputPath)) {
+        logger.logSuccess(`Transaction data successfully saved to ${outputPath}`)
+      } else {
+        logger.logError(`Failed to save transaction data to ${outputPath}`)
+      }
+    }
 
     logger.logHeader('RESULTS')
     logger.logSuccess(`Total From Sales: ${logger.formatCurrency(result.sales, result.currency)}`)
